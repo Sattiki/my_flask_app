@@ -1,18 +1,15 @@
-{% extends "layout.html" %}
-{% block content %}
-    <h1>{{ title }}</h1>
-    <form method="post" action="">
-            {{ form.hidden_tag() }}
-        <div>
-            {{ form.title.label() }}<br>
-            {{ form.title }}
-        </div>
-        <div>
-            {{ form.content.label() }}<br>
-            {{ form.content() }}
-        </div>
-        <div>
-            {{ form.submit() }}
-        </div>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Post</title>
+</head>
+<body>
+    <h1>Create a New Post</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        {{ form.title.label }} {{ form.title(size=50) }}<br>
+        {{ form.content.label }} {{ form.content(cols=80, rows=10) }}<br>
+        {{ form.submit() }}
     </form>
-{% endblock %}
+</body>
+</html>

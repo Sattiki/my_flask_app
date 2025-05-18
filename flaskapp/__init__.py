@@ -1,15 +1,15 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-# Creating your flaskapp instance
-app = Flask(__name__, instance_relative_config=True)
-app.config.from_pyfile('config.py')
+db = SQLAlchemy()
 
-# Configuring the SQLite database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+def create_app():
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_pyfile('config.py')
+    db.init_app(app)
 
-# Creating a SQLAlchemy database instance
-db = SQLAlchemy(app)
-app.app_context().push()
+    # Import routes to register them 
+    with app.app_context():
+        from flaskapp import routes
 
-from flaskapp import routes
+    return app
