@@ -33,16 +33,8 @@ def new_post():
         return redirect(url_for('home'))
     return render_template('create_post.html', title='New Post', form=form)
 
-# Dashboard showing page views per day
-@app.route('/dashboard')
-def dashboard():
-    days = Day.query.all()
-    df = pd.DataFrame([{'Date': day.id, 'Page views': day.views} for day in days])
-    fig = px.bar(df, x='Date', y='Page views')
-    graphJSON = json.dumps(fig, cls=px.utils.PlotlyJSONEncoder)
-    return render_template('dashboard.html', title='Page views per day', graphJSON=graphJSON)
 
-# Scatter plot: Brexit support vs home ownership
+# Scatter plot: Brexit support vs home ownership (removed nulls)
 @app.route("/scatter")
 def scatter():
     conn = sqlite3.connect("instance/site.db")
@@ -73,26 +65,34 @@ def scatter():
         trendline='ols'
     )
 
-    graphJSON = json.dumps(fig, cls=px.utils.PlotlyJSONEncoder)
-    return render_template("scatter.html", title="Brexit vs. Home Ownership", graphJSON=graphJSON)
+    plot_html = fig.to_html(full_html=False)
+    return render_template("scatter.html", title="Brexit vs. Home Ownership", plot_html=plot_html)
 
-# Track IP views
-@app.before_request
-def before_request_func():
-    day_id = datetime.date.today()
-    client_ip = request.remote_addr
+# Scatter plot: Brexit support vs constituency (removed nulls)
+@app.route("/constituency")
+def constituency():
+    conn = sqlite3.connect("instance/site.db")
+    df = pd.read_sql_query("""
+        SELECT constituency_name, BrexitVote19, TotalVote19
+        FROM uk_data
+        WHERE BrexitVote19 IS NOT NULL AND TotalVote19 IS NOT NULL
+    """, conn)
+    conn.close()
 
-    query = Day.query.filter_by(id=day_id)
-    if query.count() > 0:
-        current_day = query.first()
-        current_day.views += 1
-    else:
-        current_day = Day(id=day_id, views=1)
-        db.session.add(current_day)
+    df['brexit_vote_ratio'] = df['BrexitVote19'] / df['TotalVote19']
 
-    query = IpView.query.filter_by(ip=client_ip, date_id=day_id)
-    if query.count() == 0:
-        ip_view = IpView(ip=client_ip, date_id=day_id)
-        db.session.add(ip_view)
+    fig = px.bar(
+        df.sort_values(by='brexit_vote_ratio', ascending=False),
+        x='constituency_name',
+        y='brexit_vote_ratio',
+        title='Brexit Vote Ratio by Constituency (No Nulls)',
+        labels={'brexit_vote_ratio': 'Brexit Vote Ratio'},
+        height=600
+    )
 
-    db.session.commit()
+    fig.update_layout(xaxis_tickangle=-45)
+
+    plot_html = fig.to_html(full_html=False)
+    return render_template("constituency.html", title="Brexit Vote Ratio by Constituency", plot_html=plot_html)
+
+
